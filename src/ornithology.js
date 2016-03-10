@@ -15,7 +15,7 @@
  * @author Seth M.
  */
 
-let config = require('./config.js'),
+let config = require('../config.js'),
     flowdock = require('./flowdock'),
     canary = require('./canary');
 
