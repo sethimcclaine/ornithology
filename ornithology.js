@@ -1,169 +1,120 @@
+'use strict';
+
 /**
- * --BirdWatch--
- * Check API every 6 amount of seconds 
+ * Check API every X amount of seconds
  * Count the number of missed webhook lags
  * Post a message in flow when count is increased
- 
-            ___     ___                        
-           // ,\/o\/ ,\\                     {o,o} 
+
+            ___     ___
+           // ,\/o\/ ,\\                     {o,o}
           //\__/-^-\__/\\                   ./)_)   {o,o}
          //             \\                    " "  ./)_)
     /^\ /^\ /^\ /^\ /^\ /^\ /^\                      " "
     |X| |X| |X| |X| |X| |X| |X|
- * --Chirp--
- * Listen for messages starting with #ornithology and respond accordingly
- * options:
- *  - `#ornithology help`
- *  - `#ornithology pause`
- *  - `#ornithology on`
- *  - `#ornithology off`
- 
+
+
  * @author Seth M.
  */
 
-var config = require('./config.js');
-console.log(config);
-
-var EventSource = require('eventsource'),
-    request = require('request'),
+var request = require('request'),
+    flowdock = require('./flowdock'),
+    config = require('./config.js'),
+    fdConn = new flowdock(config),
+    messageStatus = 'on',
     lastCount = {
         V1: 100,
         V2: 100
     },
     urls = {
-        V1: 'http://ocm-canary.f4tech.com/results',
-        V2: 'http://ocm-canary.f4tech.com/results-v2'
-    };
-var messageStatus = 'on';
+    V1: 'http://ocm-canary.f4tech.com/results',
+    V2: 'http://ocm-canary.f4tech.com/results-v2'
+};
+var TAG_PATTERN = new RegExp('(help|snooze|status|on|off)');
 
-var parseResponse = function(body, version) {
+var RESPONSE_MESSAGES = {
+    'help': 'Available `#ornithology` options are `help`, `snooze`, `status`, `on` and `off`',
+    'snooze': 'ornithology messages will be snoozed for 30 minutes',
+    'status': 'ornithology messages are currently ',
+    'on': 'ornithology messages have been turned on',
+    'off': 'ornithology messages have been turned off'
+};
+
+
+var parseResponse = function parseResponse(body, version) {
     var missing = [],
         hooks = body['webhooks-data'];
 
-    for(var i in hooks) {
+    for (var i in hooks) {
         if (!hooks[i]['webhook-t']) {
             missing.push(hooks[i]);
         }
     }
 
     if (missing.length > 2) {
-        console.log(version + ' Missing Webhook Calls: '+missing.length);
+        console.log(version + ' Missing Webhook Calls: ' + missing.length);
 
-        if(missing.length > lastCount[version]) {
+        if (missing.length > lastCount[version]) {
             missing.reverse();
-            var message = version+' Missing Webhook Calls (#spotw)' +
-                    '\nCurrent:'+missing.length +
-                    '\nPrevious:'+lastCount[version] +
-                    '\nLast: '+missing[0].desc;
-
-            if(messageStatus === 'snooze' || messageStatus === 'off') {
-                console.log('Messages are currently '+messageStatus);
-            } else {
-                postMessage(message);
-            }
+            var message = version + ' Missing Webhook Calls (#spotw)' + '\nCurrent:' + missing.length + '\nPrevious:' + lastCount[version] + '\nLast: ' + missing[0].desc;
+            fdConn.postMessage(message);
         }
     } else {
-        console.log(version+' hooks are clean');
+        console.log(version + ' hooks are clean');
     }
-
     lastCount[version] = missing.length;
 };
 
-var processRequestV1 = function(error, response, body) {
-    if(!error && response.statusCode == 200) {
+var processRequestV1 = function processRequestV1(error, response, body) {
+    if (!error && response.statusCode == 200) {
         parseResponse(JSON.parse(body), 'V1');
     } else {
         console.log('error processing');
     }
 };
-var processRequestV2 = function(error, response, body) {
-    if(!error && response.statusCode == 200) {
+var processRequestV2 = function processRequestV2(error, response, body) {
+    if (!error && response.statusCode == 200) {
         parseResponse(JSON.parse(body), 'V2');
     } else {
         console.log('error processing');
     }
 };
-var checkStatus = function() {
-        request(urls['V1'], processRequestV1);
-        request(urls['V2'], processRequestV2);
+var checkStatus = function checkStatus() {
+    request(urls['V1'], processRequestV1);
+    request(urls['V2'], processRequestV2);
 };
 
-var postMessage = function(message) {
-    console.log('posting message');
-    var options = {
-        method: 'POST',
-        url: 'https://'+config.cred+':'+config.pass+'@api.flowdock.com//flows/'+config.org+'/'+config.flow+'/messages',
-        qs: {
-            content: message,
-            event: 'message'
-        },
-        headers: {
-            'postman-token': '565ef014-b85a-14b8-69c8-29a393241cec',
-            'cache-control': 'no-cache'
-        }
-    };
+var handleFlowMessage = function handleFlowMessage(message) {
+    if (message.event == 'message' && message.tags.indexOf('ornithology') !== -1) {
 
-    request(options, function(error, response, body) {
-        if (error) throw new Error(error);
-            console.log('::Message Sent::');
-    });
-};
-
-    
-
-var handleFlowMessage = function(message) {
-    if(message.event == 'message' && message.tags.indexOf('ornithology') !== -1) {
-        var tagPattern = new RegExp('(help|snooze|status|on|off)');
-        var result = tagPattern.exec(message.content);
-        if(result == null) {
+        var result = TAG_PATTERN.exec(message.content),
+            append = '';
+        if (result == null) {
             console.log('no #ornithology command found');
             return;
         }
         switch (result[0]) {
-            case 'help':
-                console.log('help');
-                postMessage('Available `#ornithology` options are `help`, `snooze`, `status`, `on` and `off`');
-                break;
-            case 'snooze':
-                console.log('snooze');
-                messageStatus = 'snooze';
-                setTimeout(function() {
-                    messageStatus = 'on';
-                    postMessage('ornithology snooze over, messages have been turned back on');
-                }, 1800000);
-                postMessage('ornithology messages will be snoozed for 30 minutes');
-                break;
             case 'status':
-                console.log('status');
-                postMessage('ornithology messages are currently '+messageStatus);
+              append = messageStatus;
+              break;
+            case 'snooze':
+                messageStatus = 'snooze';
+                setTimeout(function () {
+                    messageStatus = 'on';
+                    fdConn.postMessage('ornithology snooze over, messages have been turned back on');
+                }, 1800000);
                 break;
             case 'on':
-                console.log('on');
                 messageStatus = 'on';
-                postMessage('ornithology messages have been turned on');
                 break;
             case 'off':
-                console.log('off');
                 messageStatus = 'off';
-                postMessage('ornithology messages have been turned off');
                 break;
         }
-    }
-}
-var observeFlow = function() {
-    console.log('Observing: '+config.flow);
-
-    var streamUrl = 'https://'+config.cred+':'+ config.pass +'@stream.flowdock.com/flows?filter='+config.org+'/'+config.flow
-    var jsonStream = new EventSource(streamUrl);
-
-    jsonStream.onmessage = function(e) {
-        handleFlowMessage(JSON.parse(e.data));
+        console.log(result[0]);
+        fdConn.postMessage(RESPONSE_MESSAGES[result[0]] + append);
     }
 };
-//*
-observeFlow();
-setInterval(checkStatus, 60000);
-/*/
-checkStatus();
-//*/
 
+console.log("observing ", config.flow);
+fdConn.observeFlow(handleFlowMessage);
+setInterval(checkStatus, 60000);
