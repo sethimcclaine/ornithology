@@ -1,12 +1,13 @@
 **For setup**
 
- - Copy `exampleConfig.js` to `config.js` 
+ - Copy `exampleConfig.js` to `config.js`
  - Add users api key to `cred`
- - Update flow 
+ - Update flow
 
 **To run**
 
- - `node ornithology.js`
+ - `bash startOrnithology`
 
-**Coming soon --For es6 compiling**
-babel --watch src --out-dir es5
+**For es6 compiling**
+
+ - `bash startBabel`

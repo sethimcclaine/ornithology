@@ -1,6 +1,6 @@
-var request = require('request');
+let request = require('request');
 
-var URLS = {
+const URLS = {
   V1: 'http://ocm-canary.f4tech.com/results',
   V2: 'http://ocm-canary.f4tech.com/results-v2'
 };
@@ -11,7 +11,7 @@ module.exports= {
       if (!error && response.statusCode == 200) {
         callback(JSON.parse(body), version)
       } else {
-          console.log('error processing');
+        console.log('error processing');
       }
     });
   }
