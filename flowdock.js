@@ -41,5 +41,16 @@ module.exports = function(config) {
       jsonStream.onmessage = function (e) {
         callback(JSON.parse(e.data));
       };
+      setInterval(function() {
+        console.log('refreshing jsonStream');
+        jsonStream.onmessage = null;
+        jsonStream = null;
+
+        jsonStream = new EventSource(streamUrl);
+
+        jsonStream.onmessage = function (e) {
+          callback(JSON.parse(e.data));
+        };
+      }, 60*60*1000);
   };
 };
