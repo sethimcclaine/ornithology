@@ -1,5 +1,4 @@
 /es5
 /node_modules/*
-package.json
 config.js
 *.swp
