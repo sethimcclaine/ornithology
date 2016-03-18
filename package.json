@@ -8,18 +8,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sethimcclaine/birdWatch.git"
+    "url": "git+https://github.com/sethimcclaine/ornithology.git"
   },
   "keywords": [
-    "birdwatch",
     "ornithology"
   ],
   "author": "sethimcclaine",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/sethimcclaine/birdWatch/issues"
+    "url": "https://github.com/sethimcclaine/ornithology/issues"
   },
-  "homepage": "https://github.com/sethimcclaine/birdWatch#readme",
+  "homepage": "https://github.com/sethimcclaine/ornithology#readme",
   "devDependencies": {
     "babel-preset-es2015": "^6.6.0",
     "babel-preset-react": "^6.3.13"
