@@ -1,6 +1,7 @@
 **For setup**
 
  - Run `npm install`
+ - `npm install -g`
  - Copy `exampleConfig.js` to `config.js`
    - Add users api key to `cred`
    - Update flow
